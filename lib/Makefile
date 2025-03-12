@@ -35,7 +35,7 @@ ifeq ($(DEBUG), 1)
 endif
 
 OBJ = cbp.o my_value_predictor.o parameters.o uarchsim.o cache.o bp.o resource_schedule.o gzstream.o
-DEPS = $(TOP)/cbp.h value_predictor_interface.h sim_common_structs.h my_value_predictor.h trace_reader.h fifo.h parameters.h uarchsim.h cache.h bp.h resource_schedule.h gzstream.h
+DEPS = log.h $(TOP)/cbp.h value_predictor_interface.h sim_common_structs.h my_value_predictor.h trace_reader.h fifo.h parameters.h uarchsim.h cache.h bp.h resource_schedule.h gzstream.h
 
 all: libcbp.a
 

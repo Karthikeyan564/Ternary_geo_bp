@@ -53,4 +53,5 @@ cbp: $(OBJ) | lib
 
 clean:
 	rm -f *.o cbp
+	rm -r output
 	make -C lib clean
