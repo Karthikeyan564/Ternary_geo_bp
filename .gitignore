@@ -1,0 +1,7 @@
+.vscode
+lib/*.o
+*.o
+cbp
+output/
+traces/
+*.a

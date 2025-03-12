@@ -22,6 +22,7 @@
 #include "lib/log.h"
 #include <cassert>
 #include <stdio.h>
+#include <iterator>
 
 
 //FILE *fileptr = fopen("output/cond_branches.log", "w");
@@ -141,6 +142,27 @@ void notify_agen_complete(uint64_t seq_no, uint8_t piece, uint64_t pc, const Dec
 //
 // For conditional branches, we use this information to update the predictor.
 // At the moment, we do not consider updating any other structure, but the contestants are allowed to  update any other predictor state.
+std::string vector_to_string(const std::vector<uint64_t>& vec) {
+    std::ostringstream out;
+    if (vec.empty()) {
+        return "[]";
+    }
+    std::copy(vec.begin(), vec.end() - 1, std::ostream_iterator<uint64_t>(out, ";"));
+    out << vec.back();
+    std::string regs_string( out.str() );
+    regs_string = "[" + regs_string + "]";
+    return regs_string;
+}
+
+std::uint64_t value_of_optional_int(std::optional<uint64_t> optionalInt){
+    if (optionalInt.has_value()) {
+        return optionalInt.value();
+    } 
+    else {
+        return 256;
+    }
+}
+
 void notify_instr_execute_resolve(uint64_t seq_no, uint8_t piece, uint64_t pc, const bool pred_dir, const ExecuteInfo& _exec_info, const uint64_t execute_cycle)
 {
     const bool is_branch = is_br(_exec_info.dec_info.insn_class);
@@ -153,12 +175,28 @@ void notify_instr_execute_resolve(uint64_t seq_no, uint8_t piece, uint64_t pc, c
 
             cbp2016_tage_sc_l.update(seq_no, piece, pc, _resolve_dir, pred_dir, _next_pc);
             cond_predictor_impl.update(seq_no, piece, pc, _resolve_dir, pred_dir, _next_pc);
-	    fprintf(files.history, "%" PRIx64 ",%" PRIx8 ",%" PRIx64 ",%" PRIx64 ",%" PRIu64 ",%d,%d\n", seq_no, piece, pc, _next_pc, execute_cycle, pred_dir, _resolve_dir);
+	    // fprintf(files.history, "%" PRIx64 ",%" PRIx8 ",%" PRIx64 ",%" PRIx64 ",%" PRIu64 ",%d,%d\n", 
+        //         seq_no, piece, pc, _next_pc, execute_cycle, pred_dir, _resolve_dir);
         }
         else
         {
             assert(pred_dir);
         }
+    }
+    if(is_cond_br(_exec_info.dec_info.insn_class) || is_load(_exec_info.dec_info.insn_class)){
+        const std::string src_regs_string = vector_to_string(_exec_info.dec_info.src_reg_info);
+
+        const int taken = (_exec_info.taken.has_value())? _exec_info.taken.value():-1;
+        const uint64_t dst_reg = (_exec_info.dec_info.dst_reg_info.has_value())? _exec_info.dec_info.dst_reg_info.value(): 256 ;  
+        const uint64_t mem_va = (_exec_info.mem_va.has_value())? _exec_info.mem_va.value():0;
+          
+        fprintf(files.history, "%" PRIx64 ",%" PRIx8 ",%" PRIx64 ",%" PRIx64 ",%" PRIu64 ",%d,%d,%s" ",%" PRIu64 ",%" PRIu64 "\n", 
+            seq_no, piece, pc, _exec_info.next_pc, execute_cycle, pred_dir, taken, src_regs_string,
+            dst_reg, mem_va);
+        // which component of tage is used for prediction
+        // pred_cycle, decode_cycle
+        // decinfo - src_reg_info - log_reg(uint64_t), dst_reg_info
+        // exec_info - taken_target, mem_va, mem_sz, dst_reg_value
     }
 }
 
