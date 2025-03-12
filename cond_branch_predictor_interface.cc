@@ -191,7 +191,7 @@ void notify_instr_execute_resolve(uint64_t seq_no, uint8_t piece, uint64_t pc, c
         const uint64_t mem_va = (_exec_info.mem_va.has_value())? _exec_info.mem_va.value():0;
           
         fprintf(files.history, "%" PRIx64 ",%" PRIx8 ",%" PRIx64 ",%" PRIx64 ",%" PRIu64 ",%d,%d,%s" ",%" PRIu64 ",%" PRIu64 "\n", 
-            seq_no, piece, pc, _exec_info.next_pc, execute_cycle, pred_dir, taken, src_regs_string,
+            seq_no, piece, pc, _exec_info.next_pc, execute_cycle, pred_dir, taken, src_regs_string.c_str(),
             dst_reg, mem_va);
         // which component of tage is used for prediction
         // pred_cycle, decode_cycle
