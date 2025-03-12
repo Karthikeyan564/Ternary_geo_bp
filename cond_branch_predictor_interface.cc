@@ -19,14 +19,20 @@
 #include "lib/sim_common_structs.h"
 #include "cbp2016_tage_sc_l.h"
 #include "my_cond_branch_predictor.h"
+#include "lib/log.h"
 #include <cassert>
+#include <stdio.h>
 
+
+//FILE *fileptr = fopen("output/cond_branches.log", "w");
 //
 // beginCondDirPredictor()
 // 
 // This function is called by the simulator before the start of simulation.
 // It can be used for arbitrary initialization steps for the contestant's code.
 //
+extern log_files files;
+
 void beginCondDirPredictor()
 {
     // setup sample_predictor
@@ -144,8 +150,10 @@ void notify_instr_execute_resolve(uint64_t seq_no, uint8_t piece, uint64_t pc, c
         {
             const bool _resolve_dir = _exec_info.taken.value();
             const uint64_t _next_pc = _exec_info.next_pc;
+
             cbp2016_tage_sc_l.update(seq_no, piece, pc, _resolve_dir, pred_dir, _next_pc);
             cond_predictor_impl.update(seq_no, piece, pc, _resolve_dir, pred_dir, _next_pc);
+	    fprintf(files.history, "%" PRIx64 ",%" PRIx8 ",%" PRIx64 ",%" PRIx64 ",%" PRIu64 ",%d,%d\n", seq_no, piece, pc, _next_pc, execute_cycle, pred_dir, _resolve_dir);
         }
         else
         {

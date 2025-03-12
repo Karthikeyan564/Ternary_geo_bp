@@ -35,8 +35,10 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "resource_schedule.h"
 #include "uarchsim.h"
 #include "parameters.h"
+#include "log.h"
 
 uarchsim_t *sim;
+log_files files;
 
 int parseargs(int argc, char ** argv) 
 {
@@ -278,6 +280,7 @@ int main(int argc, char ** argv)
 {
   int i = parseargs(argc, argv);
   TraceReader reader(argv[i]);
+  files.init(string(argv[i]));
 
   // Need to create simulator after parsing arguments (for global parameters).
   sim = new uarchsim_t;
