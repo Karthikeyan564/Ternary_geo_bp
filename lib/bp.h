@@ -104,7 +104,7 @@ public:
 
     // Returns true if instruction is a mispredicted branch.
     // Also updates all branch predictor structures as applicable.
-    bool predict(uint64_t seq_no, uint8_t piece, InstClass insn, uint64_t pc, uint64_t next_pc, const uint64_t pred_cycle);
+    bool predict(uint64_t seq_no, uint8_t piece, InstClass insn, uint64_t pc, uint64_t next_pc, const uint64_t pred_cycle, const uint64_t fetch_cycle, const uint64_t exec_cycle);
 
     // Output all branch prediction measurements.
     void output(const uint64_t num_inst);

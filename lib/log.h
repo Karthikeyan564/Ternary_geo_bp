@@ -7,6 +7,7 @@ struct log_files
 	std::string file_name;
   FILE *result;
   FILE *history;
+  FILE *pred_history;
 
   void init(std::string path_str){
     std::string file_name = std::filesystem::path(path_str).filename();
@@ -16,10 +17,14 @@ struct log_files
     output_path /= file_name;
     std::string result_filename = output_path.string()+"_result.log";
     std::string history_filename = output_path.string()+"_history.log";
+    std::string pred_history_filename = output_path.string()+"_pred_history.log";
     result = fopen(result_filename.c_str(),"w");
     history = fopen(history_filename.c_str(),"w");
+    pred_history = fopen(pred_history_filename.c_str(),"w");
     printf("Result log file: %s\n", result_filename.c_str());
     printf("History log file: %s\n", history_filename.c_str());
+    printf("Pred History log file: %s\n", pred_history_filename.c_str());
+
   }
 
   ~log_files(){

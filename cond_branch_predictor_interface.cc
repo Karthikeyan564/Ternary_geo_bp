@@ -58,10 +58,12 @@ void notify_instr_fetch(uint64_t seq_no, uint8_t piece, uint64_t pc, const uint6
 // input values are unique identifying ids(seq_no, piece) and PC of the branch.
 // return value is the predicted direction. 
 //
-bool get_cond_dir_prediction(uint64_t seq_no, uint8_t piece, uint64_t pc, const uint64_t pred_cycle)
+bool get_cond_dir_prediction(uint64_t seq_no, uint8_t piece, uint64_t pc, const uint64_t pred_cycle,const uint64_t fetch_cycle, const uint64_t exec_cycle)
 {
     const bool tage_sc_l_pred =  cbp2016_tage_sc_l.predict(seq_no, piece, pc);
     const bool my_prediction = cond_predictor_impl.predict(seq_no, piece, pc, tage_sc_l_pred);
+    fprintf(files.pred_history, "%" PRIx64 ",%" PRIx8 ",%" PRIx64 ",%" PRIu64 ",%" PRIu64 ",%" PRIu64 "\n", 
+        seq_no, piece, pc, pred_cycle, fetch_cycle, exec_cycle);
     return my_prediction;
 }
 

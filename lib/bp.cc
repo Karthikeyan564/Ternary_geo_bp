@@ -73,7 +73,7 @@ bp_t::~bp_t() {
 
 // Returns true if instruction is a mispredicted branch.
 // Also updates all branch predictor structures as applicable.
-bool bp_t::predict(uint64_t seq_no, uint8_t piece, InstClass inst_class, uint64_t pc, uint64_t next_pc, const uint64_t pred_cycle)
+bool bp_t::predict(uint64_t seq_no, uint8_t piece, InstClass inst_class, uint64_t pc, uint64_t next_pc, const uint64_t pred_cycle, const uint64_t fetch_cycle, const uint64_t exec_cycle)
 {
    bool taken = false;
    bool pred_taken = false;
@@ -89,7 +89,7 @@ bool bp_t::predict(uint64_t seq_no, uint8_t piece, InstClass inst_class, uint64_
 
       // Make prediction.
       //pred_taken= TAGESCL->GetPrediction (pc);
-      pred_taken = get_cond_dir_prediction (seq_no, piece, pc, pred_cycle);
+      pred_taken = get_cond_dir_prediction(seq_no, piece, pc, pred_cycle, fetch_cycle, exec_cycle);
       
       // Determine if mispredicted or not.
       misp = (pred_taken != taken);

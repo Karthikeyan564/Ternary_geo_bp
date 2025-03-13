@@ -766,7 +766,7 @@ void uarchsim_t::step(db_t *inst)
    // Account for the effect of a mispredicted branch on the fetch cycle.
    // TODO:: capture taken_target
    bool br_mispred = false;
-   if (!PERFECT_BRANCH_PRED && BP.predict(seq_no, piece, inst->insn_class, inst->pc, inst->next_pc, predict_cycle))
+   if (!PERFECT_BRANCH_PRED && BP.predict(seq_no, piece, inst->insn_class, inst->pc, inst->next_pc, predict_cycle, fetch_cycle, exec_cycle))
    {
        br_mispred = true;
        // setting fetched/fetched_branch for the next cycle

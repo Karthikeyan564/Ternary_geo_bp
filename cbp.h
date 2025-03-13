@@ -40,7 +40,7 @@ extern void notify_instr_fetch(uint64_t seq_no, uint8_t piece, uint64_t pc, cons
 // input values are unique identifying ids(seq_no, piece) and PC of the branch.
 // return value is the predicted direction. 
 //
-extern bool get_cond_dir_prediction(uint64_t seq_no, uint8_t piece, uint64_t pc, const uint64_t pred_cycle);
+extern bool get_cond_dir_prediction(uint64_t seq_no, uint8_t piece, uint64_t pc, const uint64_t pred_cycle, const uint64_t fetch_cycle, const uint64_t exec_cycle);
 
 //
 // spec_update(uint64_t seq_no, uint8_t piece, uint64_t pc, InstClass inst_class, const bool resolve_dir, const bool pred_dir, const uint64_t next_pc)
