@@ -60,6 +60,7 @@ void notify_instr_fetch(uint64_t seq_no, uint8_t piece, uint64_t pc, const uint6
 //
 bool get_cond_dir_prediction(uint64_t seq_no, uint8_t piece, uint64_t pc, const uint64_t pred_cycle,const uint64_t fetch_cycle, const uint64_t exec_cycle)
 {
+    // which predictor was used, predictions from each, history tables where branch is found and their preiction, history tables it was stored in dured update
     const bool tage_sc_l_pred =  cbp2016_tage_sc_l.predict(seq_no, piece, pc);
     const bool my_prediction = cond_predictor_impl.predict(seq_no, piece, pc, tage_sc_l_pred);
     fprintf(files.pred_history, "%" PRIx64 ",%" PRIx8 ",%" PRIx64 ",%" PRIu64 ",%" PRIu64 ",%" PRIu64 "\n", 

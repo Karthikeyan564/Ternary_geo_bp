@@ -454,6 +454,7 @@ int predictorsize ()
 // There are a couple of other hooks that aren't used in the current implementation, but are available to exploit:
 // * notify_instr_decode 
 // * notify_instr_commit
+
 class CBP2016_TAGE_SC_L
 {
     public:
@@ -1020,7 +1021,8 @@ class CBP2016_TAGE_SC_L
         {
             // checkpoint current hist
             pred_time_histories.emplace(get_unique_inst_id(seq_no, piece), active_hist);
-            const bool pred_taken = predict_using_given_hist(seq_no, piece, PC, active_hist, true/*pred_time_predict*/);
+            bool pred_taken[3];
+            pred_taken = predict_using_given_hist(seq_no, piece, PC, active_hist, true/*pred_time_predict*/);
             return pred_taken;
         }
 
@@ -1029,13 +1031,16 @@ class CBP2016_TAGE_SC_L
             // computes the TAGE table addresses and the partial tags
             Tagepred (PC, hist_to_use);
             bool pred_taken = tage_pred;
+            short predictor_used = 0; //0,1,2 TAGE, L, SC
 #ifndef SC
-            return (tage_pred);
+            return (tage_pred, predictor_used);
 #endif
-
+bool loop_TAGE = 0;
 #ifdef LOOPPREDICTOR
             predloop = getloop (PC, hist_to_use);   // loop prediction
             pred_taken = ((hist_to_use.WITHLOOP >= 0) && (LVALID)) ? predloop : pred_taken;
+            pred_taken = ((hist_to_use.WITHLOOP >= 0) && (LVALID)) ? predloop : pred_taken;
+            loop_TAGE = ((WITHLOOP >= 0) && (LVALID)) ? 1 : 0;
 #endif
             pred_inter = pred_taken;
 
@@ -1089,20 +1094,28 @@ class CBP2016_TAGE_SC_L
 
             //Minimal benefit in trying to avoid accuracy loss on low confidence SC prediction and  high/medium confidence on TAGE
             // but just uses 2 counters 0.3 % MPKI reduction
+            // ((WITHLOOP >= 0) && (LVALID)) ? Loop predictor : TAGE;
+
+            
+            bool SC_TAGEL = 0;
+
             if (pred_inter != SCPRED)
             {
                 //Choser uses TAGE confidence and |LSUM|
                 pred_taken = SCPRED;
+                SC_TAGEL = 1;
                 if (HighConf)
                 {
                     if ((abs (LSUM) < THRES / 4))
                     {
                         pred_taken = pred_inter;
+                        SC_TAGEL = 0;
                     }
 
                     else if ((abs (LSUM) < THRES / 2))
                     {
                         pred_taken = (SecondH < 0) ? SCPRED : pred_inter;
+                        SC_TAGEL = (SecondH < 0) ? 1 : 0;
                     }
                 }
 
@@ -1110,11 +1123,17 @@ class CBP2016_TAGE_SC_L
                     if ((abs (LSUM) < THRES / 4))
                     {
                         pred_taken = (FirstH < 0) ? SCPRED : pred_inter;
+                        SC_TAGEL = (FirstH < 0) ? 1 : 0;
                     }
 
             }
 
-            return pred_taken;
+            //0,1,2 TAGE, L, SC
+            if(SC_TAGEL) predictor_used = 2;
+            else if(loop_TAGE) predictor_used = 1;
+            else predictor_used = 0;
+
+            return pred_taken, predictor_used;
         }
 
 
