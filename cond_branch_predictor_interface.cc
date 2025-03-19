@@ -23,6 +23,7 @@
 #include <cassert>
 #include <stdio.h>
 #include <iterator>
+#include <fstream>
 
 
 //FILE *fileptr = fopen("output/cond_branches.log", "w");
@@ -33,6 +34,13 @@
 // It can be used for arbitrary initialization steps for the contestant's code.
 //
 extern log_files files;
+std::unordered_map<uint64_t/*key*/, DebugLog/*val*/> histories_log;
+
+uint64_t get_unique_inst_id(uint64_t seq_no, uint8_t piece) 
+{
+    assert(piece < 16);
+    return (seq_no << 4) | (piece & 0x000F);
+}
 
 void beginCondDirPredictor()
 {
@@ -61,10 +69,24 @@ void notify_instr_fetch(uint64_t seq_no, uint8_t piece, uint64_t pc, const uint6
 bool get_cond_dir_prediction(uint64_t seq_no, uint8_t piece, uint64_t pc, const uint64_t pred_cycle,const uint64_t fetch_cycle, const uint64_t exec_cycle)
 {
     // which predictor was used, predictions from each, history tables where branch is found and their preiction, history tables it was stored in dured update
-    const bool tage_sc_l_pred =  cbp2016_tage_sc_l.predict(seq_no, piece, pc);
+    const PredDebugInfo active_predDebug =  cbp2016_tage_sc_l.predict(seq_no, piece, pc);  
+    const bool tage_sc_l_pred = active_predDebug.pred_taken;
     const bool my_prediction = cond_predictor_impl.predict(seq_no, piece, pc, tage_sc_l_pred);
-    fprintf(files.pred_history, "%" PRIx64 ",%" PRIx8 ",%" PRIx64 ",%" PRIu64 ",%" PRIu64 ",%" PRIu64 "\n", 
-        seq_no, piece, pc, pred_cycle, fetch_cycle, exec_cycle);
+    // fprintf(files.pred_history, "%" PRIx64 ",%" PRIx8 ",%" PRIx64 ",%" PRIu64 ",%" PRIu64 ",%" PRIu64 "\n", 
+    //     seq_no, piece, pc, pred_cycle, fetch_cycle, exec_cycle);
+
+    DebugLog activeLog;
+    const auto log_key = get_unique_inst_id(seq_no, piece);
+    activeLog.pc = pc;
+    activeLog.pred_cycle = pred_cycle;
+    activeLog.fetch_cycle = fetch_cycle;
+    activeLog.execute_cycle = exec_cycle;
+    activeLog.pred_dir = tage_sc_l_pred;
+    activeLog.inst_class = InstClass::condBranchInstClass;
+    activeLog.GHIST = active_predDebug.GHIST;
+    activeLog.predictor_used = active_predDebug.predictor_used;
+    histories_log[log_key] = activeLog;
+
     return my_prediction;
 }
 
@@ -157,17 +179,9 @@ std::string vector_to_string(const std::vector<uint64_t>& vec) {
     return regs_string;
 }
 
-std::uint64_t value_of_optional_int(std::optional<uint64_t> optionalInt){
-    if (optionalInt.has_value()) {
-        return optionalInt.value();
-    } 
-    else {
-        return 256;
-    }
-}
-
 void notify_instr_execute_resolve(uint64_t seq_no, uint8_t piece, uint64_t pc, const bool pred_dir, const ExecuteInfo& _exec_info, const uint64_t execute_cycle)
 {
+    const auto log_key = get_unique_inst_id(seq_no, piece);
     const bool is_branch = is_br(_exec_info.dec_info.insn_class);
     if(is_branch)
     {
@@ -186,21 +200,42 @@ void notify_instr_execute_resolve(uint64_t seq_no, uint8_t piece, uint64_t pc, c
             assert(pred_dir);
         }
     }
-    if(is_cond_br(_exec_info.dec_info.insn_class) || is_load(_exec_info.dec_info.insn_class)){
-        const std::string src_regs_string = vector_to_string(_exec_info.dec_info.src_reg_info);
 
-        const int taken = (_exec_info.taken.has_value())? _exec_info.taken.value():-1;
-        const uint64_t dst_reg = (_exec_info.dec_info.dst_reg_info.has_value())? _exec_info.dec_info.dst_reg_info.value(): 256 ;  
-        const uint64_t mem_va = (_exec_info.mem_va.has_value())? _exec_info.mem_va.value():0;
-          
-        fprintf(files.history, "%" PRIx64 ",%" PRIx8 ",%" PRIx64 ",%" PRIx64 ",%" PRIu64 ",%d,%d,%s" ",%" PRIu64 ",%" PRIu64 "\n", 
-            seq_no, piece, pc, _exec_info.next_pc, execute_cycle, pred_dir, taken, src_regs_string.c_str(),
-            dst_reg, mem_va);
-        // which component of tage is used for prediction
-        // pred_cycle, decode_cycle
-        // decinfo - src_reg_info - log_reg(uint64_t), dst_reg_info
-        // exec_info - taken_target, mem_va, mem_sz, dst_reg_value
+    
+
+    if(is_cond_br(_exec_info.dec_info.insn_class) || is_load(_exec_info.dec_info.insn_class)){
+
+ 
+
+        
+        DebugLog& activeLog = histories_log[log_key];
+        if (is_load(_exec_info.dec_info.insn_class))
+        {
+            activeLog.pc = pc;
+            activeLog.execute_cycle = execute_cycle;
+            activeLog.pred_dir = pred_dir;
+            activeLog.inst_class = InstClass::loadInstClass; 
+        }
+
+        activeLog.taken =  (_exec_info.taken.has_value())? _exec_info.taken.value():-1;
+        activeLog.src_regs_string = vector_to_string(_exec_info.dec_info.src_reg_info);
+        activeLog.dst_reg = (_exec_info.dec_info.dst_reg_info.has_value())? _exec_info.dec_info.dst_reg_info.value(): 256 ;  
+        activeLog.mem_va = (_exec_info.mem_va.has_value())? _exec_info.mem_va.value():0;
+        activeLog.next_pc = _exec_info.next_pc;
     }
+
+    // if(is_cond_br(_exec_info.dec_info.insn_class) || is_load(_exec_info.dec_info.insn_class)){
+
+    //     const std::string src_regs_string = vector_to_string(_exec_info.dec_info.src_reg_info);
+
+    //     const int taken = (_exec_info.taken.has_value())? _exec_info.taken.value():-1;
+    //     const uint64_t dst_reg = (_exec_info.dec_info.dst_reg_info.has_value())? _exec_info.dec_info.dst_reg_info.value(): 256 ;  
+    //     const uint64_t mem_va = (_exec_info.mem_va.has_value())? _exec_info.mem_va.value():0;
+          
+    //     fprintf(files.history, "%" PRIx64 ",%" PRIx8 ",%" PRIx64 ",%" PRIx64 ",%" PRIu64 ",%d,%d,%s" ",%" PRIu64 ",%" PRIu64 "\n", 
+    //         seq_no, piece, pc, _exec_info.next_pc, execute_cycle, pred_dir, taken, src_regs_string.c_str(),
+    //         dst_reg, mem_va);
+    // }
 }
 
 //
@@ -220,8 +255,41 @@ void notify_instr_commit(uint64_t seq_no, uint8_t piece, uint64_t pc, const bool
 // This function is called by the simulator at the end of simulation.
 // It can be used by the contestant to print out other contestant-specific measurements.
 //
+void printToCSV(const std::unordered_map<uint64_t, DebugLog>& histories_log, FILE *file) {
+    if (!file) {
+        std::cerr << "Error: Invalid file pointer." << std::endl;
+        return;
+    }
+    
+    // Write CSV header
+    fprintf(file, "Key,PC,Next_PC,Pred_Cycle,Fetch_Cycle,Execute_Cycle,Pred_Dir,Taken," 
+                   "Predictor_Used,Src_Regs,Dst_Reg,Mem_VA,Inst_Class,GHIST,Load_Dependence\n");
+    
+    for (const auto& [key, log] : histories_log) {
+        fprintf(file, "%lu,%lu,%lu,%lu,%lu,%lu,%d,%d,%d,\"%s\",%d,%lu,%d,%lu,%d\n",
+                key,
+                log.pc,
+                log.next_pc,
+                log.pred_cycle,
+                log.fetch_cycle,
+                log.execute_cycle,
+                log.pred_dir,
+                log.taken,
+                log.predictor_used,
+                log.src_regs_string.c_str(),
+                log.dst_reg,
+                log.mem_va,
+                static_cast<int>(log.inst_class),
+                log.GHIST,
+                log.load_dependence);
+    }
+    fflush(file);
+    // std::cout << "Data written to history log file." << std::endl;
+}
+
 void endCondDirPredictor ()
 {
+    printToCSV(histories_log, files.history);     
     cbp2016_tage_sc_l.terminate();
     cond_predictor_impl.terminate();
 }

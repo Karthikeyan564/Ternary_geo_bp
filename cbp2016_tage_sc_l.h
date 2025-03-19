@@ -1017,25 +1017,31 @@ class CBP2016_TAGE_SC_L
             return (pred_inter + (((HitBank+1)/4)<<4) + (HighConf<<1) + (LowConf <<2) +((AltBank!=0)<<3)+ ((PC^(PC>>2))<<7)) & ((1<<LOGBIAS) -1);
         }
 
-        bool predict (uint64_t seq_no, uint8_t piece, UINT64 PC)
+        PredDebugInfo predict (uint64_t seq_no, uint8_t piece, UINT64 PC)
         {
             // checkpoint current hist
+            PredDebugInfo active_predDebug;
             pred_time_histories.emplace(get_unique_inst_id(seq_no, piece), active_hist);
-            bool pred_taken[3];
-            pred_taken = predict_using_given_hist(seq_no, piece, PC, active_hist, true/*pred_time_predict*/);
-            return pred_taken;
+            auto [pred_taken,predictor_used] = 
+                        predict_using_given_hist(seq_no, piece, PC, active_hist, true/*pred_time_predict*/);
+
+            active_predDebug.pred_taken = pred_taken;
+            active_predDebug.predictor_used = predictor_used;
+            active_predDebug.GHIST = active_hist.GHIST;
+            // return pred_taken;
+            return active_predDebug;
         }
 
-        bool predict_using_given_hist (uint64_t seq_no, uint8_t piece, UINT64 PC, const cbp_hist_t& hist_to_use, const bool pred_time_predict)
+        std::tuple<bool, uint8_t> predict_using_given_hist (uint64_t seq_no, uint8_t piece, UINT64 PC, const cbp_hist_t& hist_to_use, const bool pred_time_predict)
         {
             // computes the TAGE table addresses and the partial tags
             Tagepred (PC, hist_to_use);
             bool pred_taken = tage_pred;
-            short predictor_used = 0; //0,1,2 TAGE, L, SC
+            uint8_t predictor_used = 0; //0,1,2 TAGE, L, SC
 #ifndef SC
             return (tage_pred, predictor_used);
 #endif
-bool loop_TAGE = 0;
+            bool loop_TAGE = 0;
 #ifdef LOOPPREDICTOR
             predloop = getloop (PC, hist_to_use);   // loop prediction
             pred_taken = ((hist_to_use.WITHLOOP >= 0) && (LVALID)) ? predloop : pred_taken;
@@ -1133,7 +1139,9 @@ bool loop_TAGE = 0;
             else if(loop_TAGE) predictor_used = 1;
             else predictor_used = 0;
 
-            return pred_taken, predictor_used;
+            // return pred_taken, predictor_used;
+            return std::make_tuple(pred_taken, predictor_used);
+            // return pred_taken
         }
 
 
@@ -1253,7 +1261,8 @@ bool loop_TAGE = 0;
         {
             const auto pred_hist_key = get_unique_inst_id(seq_no, piece);
             const auto& pred_time_history = pred_time_histories.at(pred_hist_key);
-            const bool pred_taken = predict_using_given_hist(seq_no, piece, PC, pred_time_history, false/*pred_time_predict*/);
+            auto [pred_taken,predictor_used]
+                     = predict_using_given_hist(seq_no, piece, PC, pred_time_history, false/*pred_time_predict*/);
             //if(pred_taken != predDir)
             //{
             //    std::cout<<"id:"<<seq_no<<" PC:0x"<<std::hex<<PC<<std::dec<<" resolveDir:"<<resolveDir<<" pred_dir_at_pred:"<<predDir<<" pred_dir_at_update:"<<pred_taken<<std::endl;

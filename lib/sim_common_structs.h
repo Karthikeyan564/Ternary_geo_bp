@@ -26,6 +26,7 @@
 #include <vector>
 #include <cstdint>
 #include <ostream>
+#include <string>
 
 enum class InstClass : uint8_t
 {
@@ -155,5 +156,74 @@ struct ExecuteInfo
         os<<" dst_reg_value:0x"<<std::hex<<exec_info.dst_reg_value.value_or(0xFFFFFFFFFFFFFFFF)<<std::dec;
         os<<" }";
         return os;
+    }
+};
+
+
+struct PredDebugInfo
+{
+    bool pred_taken;
+    uint8_t predictor_used;
+    uint64_t GHIST;
+    std::vector<uint32_t> history_lengths_pred;
+
+    PredDebugInfo()
+    {
+        pred_taken = 0;
+        predictor_used = UINT8_MAX;
+        GHIST = UINT64_MAX;
+        history_lengths_pred.clear();
+
+    }
+};
+
+struct UpdateDebugInfo
+{
+    std::vector<uint32_t> history_lengths_update;
+
+    UpdateDebugInfo()
+    {
+        history_lengths_update.clear();
+    }
+};
+
+struct DebugLog{
+    uint64_t pc; //
+    uint64_t next_pc; 
+    uint64_t pred_cycle; //
+    uint64_t fetch_cycle; //
+    uint64_t execute_cycle; //
+    uint8_t pred_dir; //
+    uint8_t taken;
+    uint8_t predictor_used;//
+    std::string src_regs_string;
+    uint8_t  dst_reg;
+    uint64_t mem_va;
+    InstClass inst_class; //
+    uint64_t GHIST;   //
+    uint8_t load_dependence;
+
+
+    DebugLog()
+    {
+        reset();
+    }
+    void reset()
+    {
+        pc = 0;
+        next_pc = 0;
+        pred_cycle = 0;
+        fetch_cycle = 0;
+        execute_cycle = 0;
+        pred_dir = 2;
+        taken = 2;
+        predictor_used = 10;
+        mem_va = 0;
+        src_regs_string = "[]";
+        dst_reg = 255;
+        inst_class = InstClass::undefInstClass;
+        load_dependence = 0;
+        GHIST = 0;
+
     }
 };
