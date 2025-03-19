@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <iterator>
 #include <fstream>
-
+#include <deque>
 
 //FILE *fileptr = fopen("output/cond_branches.log", "w");
 //
@@ -35,6 +35,7 @@
 //
 extern log_files files;
 std::unordered_map<uint64_t/*key*/, DebugLog/*val*/> histories_log;
+std::unordered_map<uint64_t, std::deque<std::vector<int>>> depChains;
 
 uint64_t get_unique_inst_id(uint64_t seq_no, uint8_t piece) 
 {
@@ -201,20 +202,55 @@ void notify_instr_execute_resolve(uint64_t seq_no, uint8_t piece, uint64_t pc, c
         }
     }
 
-    
+    std::vector<uint64_t> sources = _exec_info.dec_info.src_reg_info;
+    // Update dependency chain
+    const uint8_t maxChainDepth = 5;
+    if (is_load(_exec_info.dec_info.insn_class)){
+        std::deque<std::vector<int>> newChain;
+        uint64_t dst_reg = _exec_info.dec_info.dst_reg_info.value();
+
+        for (int src : sources) {
+            std::vector<int> newDep = {src};
+
+            if (depChains.find(src) != depChains.end()) {
+                for (const auto& chain : depChains[src]) {
+                    if (newDep.size() < maxChainDepth) {
+                        newDep.insert(newDep.end(), chain.begin(), chain.end());
+                    }
+                }
+            }
+
+            newChain.push_back(newDep);
+        }
+
+        depChains[dst_reg] = newChain;
+    }
+
+    // Get number of dependencies for conditional branches
+    uint8_t loadCount = 255;
+    if(is_cond_br(_exec_info.dec_info.insn_class)) {
+        loadCount = 0;
+        if (!(sources.empty() || (sources.size() == 1 && sources[0] == 64))) {
+            for (int src : sources) {
+                if (depChains.find(src) != depChains.end()) {
+                    loadCount += depChains[src].size();
+                }
+            }
+        }
+        loadCount = std::min(loadCount,maxChainDepth);       
+        
+    }    
 
     if(is_cond_br(_exec_info.dec_info.insn_class) || is_load(_exec_info.dec_info.insn_class)){
-
- 
-
-        
+            
         DebugLog& activeLog = histories_log[log_key];
         if (is_load(_exec_info.dec_info.insn_class))
         {
             activeLog.pc = pc;
             activeLog.execute_cycle = execute_cycle;
             activeLog.pred_dir = pred_dir;
-            activeLog.inst_class = InstClass::loadInstClass; 
+            activeLog.inst_class = InstClass::loadInstClass;
+            // loadCount = UINT8_MAX;
         }
 
         activeLog.taken =  (_exec_info.taken.has_value())? _exec_info.taken.value():-1;
@@ -222,6 +258,7 @@ void notify_instr_execute_resolve(uint64_t seq_no, uint8_t piece, uint64_t pc, c
         activeLog.dst_reg = (_exec_info.dec_info.dst_reg_info.has_value())? _exec_info.dec_info.dst_reg_info.value(): 256 ;  
         activeLog.mem_va = (_exec_info.mem_va.has_value())? _exec_info.mem_va.value():0;
         activeLog.next_pc = _exec_info.next_pc;
+        activeLog.load_dependence = loadCount;
     }
 
     // if(is_cond_br(_exec_info.dec_info.insn_class) || is_load(_exec_info.dec_info.insn_class)){
