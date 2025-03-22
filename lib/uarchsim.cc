@@ -37,6 +37,9 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "resource_schedule.h"
 #include "uarchsim.h"
 #include "parameters.h"
+#include "log.h"
+
+extern log_files files;
 
 //uarchsim_t::uarchsim_t():window(WINDOW_SIZE),
 uarchsim_t::uarchsim_t()
@@ -809,66 +812,66 @@ void uarchsim_t::output()
    //   //return track_names[static_cast<std::underlying_type<VPTracks>::type>(t)].c_str();
    //   return track_names[track].c_str();
    //};
-   //printf("VP_ENABLE = %d\n", (VP_ENABLE ? 1 : 0));
-   //printf("VP_PERFECT = %s\n", (VP_ENABLE ? (VP_PERFECT ? "1" : "0") : "n/a"));
-   //printf("VP_TRACK = %s\n", (VP_ENABLE ? get_track_name(VP_TRACK) : "n/a"));
-   printf("WINDOW_SIZE = %lu\n", WINDOW_SIZE);
-   printf("FETCH_WIDTH = %lu\n", FETCH_WIDTH);
-   printf("FETCH_NUM_BRANCH = %lu\n", FETCH_NUM_BRANCH);
-   printf("FETCH_STOP_AT_INDIRECT = %s\n", (FETCH_STOP_AT_INDIRECT ? "1" : "0"));
-   printf("FETCH_STOP_AT_TAKEN = %s\n", (FETCH_STOP_AT_TAKEN ? "1" : "0"));
-   printf("FETCH_MODEL_ICACHE = %s\n", (FETCH_MODEL_ICACHE ? "1" : "0"));
-   printf("PERFECT_BRANCH_PRED = %s\n", (PERFECT_BRANCH_PRED ? "1" : "0"));
-   printf("PERFECT_INDIRECT_PRED = %s\n", (PERFECT_INDIRECT_PRED ? "1" : "0"));
-   printf("PIPELINE_FILL_LATENCY = %lu\n", PIPELINE_FILL_LATENCY);
-   printf("NUM_LDST_LANES = %lu%s", NUM_LDST_LANES, ((NUM_LDST_LANES > 0) ? "\n" : " (unbounded)\n"));
-   printf("NUM_ALU_LANES = %lu%s", NUM_ALU_LANES, ((NUM_ALU_LANES > 0) ? "\n" : " (unbounded)\n"));
+   //fprintf(files.result,"VP_ENABLE = %d\n", (VP_ENABLE ? 1 : 0));
+   //fprintf(files.result,"VP_PERFECT = %s\n", (VP_ENABLE ? (VP_PERFECT ? "1" : "0") : "n/a"));
+   //fprintf(files.result,"VP_TRACK = %s\n", (VP_ENABLE ? get_track_name(VP_TRACK) : "n/a"));
+   fprintf(files.result,"WINDOW_SIZE = %lu\n", WINDOW_SIZE);
+   fprintf(files.result,"FETCH_WIDTH = %lu\n", FETCH_WIDTH);
+   fprintf(files.result,"FETCH_NUM_BRANCH = %lu\n", FETCH_NUM_BRANCH);
+   fprintf(files.result,"FETCH_STOP_AT_INDIRECT = %s\n", (FETCH_STOP_AT_INDIRECT ? "1" : "0"));
+   fprintf(files.result,"FETCH_STOP_AT_TAKEN = %s\n", (FETCH_STOP_AT_TAKEN ? "1" : "0"));
+   fprintf(files.result,"FETCH_MODEL_ICACHE = %s\n", (FETCH_MODEL_ICACHE ? "1" : "0"));
+   fprintf(files.result,"PERFECT_BRANCH_PRED = %s\n", (PERFECT_BRANCH_PRED ? "1" : "0"));
+   fprintf(files.result,"PERFECT_INDIRECT_PRED = %s\n", (PERFECT_INDIRECT_PRED ? "1" : "0"));
+   fprintf(files.result,"PIPELINE_FILL_LATENCY = %lu\n", PIPELINE_FILL_LATENCY);
+   fprintf(files.result,"NUM_LDST_LANES = %lu%s", NUM_LDST_LANES, ((NUM_LDST_LANES > 0) ? "\n" : " (unbounded)\n"));
+   fprintf(files.result,"NUM_ALU_LANES = %lu%s", NUM_ALU_LANES, ((NUM_ALU_LANES > 0) ? "\n" : " (unbounded)\n"));
    //BP.output();
-   printf("MEMORY HIERARCHY CONFIGURATION---------------------\n");
-   printf("STRIDE Prefetcher = %s\n", PREFETCHER_ENABLE ? "1" : "0");
-   printf("PERFECT_CACHE = %s\n", (PERFECT_CACHE ? "1" : "0"));
-   printf("WRITE_ALLOCATE = %s\n", (WRITE_ALLOCATE ? "1" : "0"));
-   printf("Within-pipeline factors:\n");
-   printf("\tAGEN latency = 1 cycle\n");
-   printf("\tStore Queue (SQ): SQ size = window size, oracle memory disambiguation, store-load forwarding = 1 cycle after store's or load's agen.\n");
-   printf("\t* Note: A store searches the L1$ at commit. The store is released\n");
-   printf("\t* from the SQ and window, whether it hits or misses. Store misses\n");
-   printf("\t* are buffered until the block is allocated and the store is\n");
-   printf("\t* performed in the L1$. While buffered, conflicting loads get\n");
-   printf("\t* the store's data as they would from the SQ.\n");
+   fprintf(files.result,"MEMORY HIERARCHY CONFIGURATION---------------------\n");
+   fprintf(files.result,"STRIDE Prefetcher = %s\n", PREFETCHER_ENABLE ? "1" : "0");
+   fprintf(files.result,"PERFECT_CACHE = %s\n", (PERFECT_CACHE ? "1" : "0"));
+   fprintf(files.result,"WRITE_ALLOCATE = %s\n", (WRITE_ALLOCATE ? "1" : "0"));
+   fprintf(files.result,"Within-pipeline factors:\n");
+   fprintf(files.result,"\tAGEN latency = 1 cycle\n");
+   fprintf(files.result,"\tStore Queue (SQ): SQ size = window size, oracle memory disambiguation, store-load forwarding = 1 cycle after store's or load's agen.\n");
+   fprintf(files.result,"\t* Note: A store searches the L1$ at commit. The store is released\n");
+   fprintf(files.result,"\t* from the SQ and window, whether it hits or misses. Store misses\n");
+   fprintf(files.result,"\t* are buffered until the block is allocated and the store is\n");
+   fprintf(files.result,"\t* performed in the L1$. While buffered, conflicting loads get\n");
+   fprintf(files.result,"\t* the store's data as they would from the SQ.\n");
    if (FETCH_MODEL_ICACHE) {
-      printf("I$: %lu %s, %lu-way set-assoc., %luB block size\n",
+      fprintf(files.result,"I$: %lu %s, %lu-way set-assoc., %luB block size\n",
          SCALED_SIZE(IC_SIZE), SCALED_UNIT(IC_SIZE), IC_ASSOC, IC_BLOCKSIZE);
    }
-   printf("L1$: %lu %s, %lu-way set-assoc., %luB block size, %lu-cycle search latency\n",
+   fprintf(files.result,"L1$: %lu %s, %lu-way set-assoc., %luB block size, %lu-cycle search latency\n",
       SCALED_SIZE(L1_SIZE), SCALED_UNIT(L1_SIZE), L1_ASSOC, L1_BLOCKSIZE, L1_LATENCY);
-   printf("L2$: %lu %s, %lu-way set-assoc., %luB block size, %lu-cycle search latency\n",
+   fprintf(files.result,"L2$: %lu %s, %lu-way set-assoc., %luB block size, %lu-cycle search latency\n",
       SCALED_SIZE(L2_SIZE), SCALED_UNIT(L2_SIZE), L2_ASSOC, L2_BLOCKSIZE, L2_LATENCY);
-   printf("L3$: %lu %s, %lu-way set-assoc., %luB block size, %lu-cycle search latency\n",
+   fprintf(files.result,"L3$: %lu %s, %lu-way set-assoc., %luB block size, %lu-cycle search latency\n",
       SCALED_SIZE(L3_SIZE), SCALED_UNIT(L3_SIZE), L3_ASSOC, L3_BLOCKSIZE, L3_LATENCY);
-   printf("Main Memory: %lu-cycle fixed search time\n", MAIN_MEMORY_LATENCY);
-   printf("---------------------------STORE QUEUE MEASUREMENTS (Full Simulation i.e. Counts Not Reset When Warmup Ends)---------------------------\n");
-   printf("Number of loads: %lu\n", num_load);
-   printf("Number of loads that miss in SQ: %lu (%.2f%%)\n", num_load_sqmiss, 100.0*(double)num_load_sqmiss/(double)num_load);
-   printf("Number of PFs issued to the memory system %lu\n", stat_pfs_issued_to_mem);
-   printf("---------------------------------------------------------------------------------------------------------------------------------------\n");
-   printf("------------------------MEMORY HIERARCHY MEASUREMENTS (Full Simulation i.e. Counts Not Reset When Warmup Ends)-------------------------\n");
+   fprintf(files.result,"Main Memory: %lu-cycle fixed search time\n", MAIN_MEMORY_LATENCY);
+   fprintf(files.result,"---------------------------STORE QUEUE MEASUREMENTS (Full Simulation i.e. Counts Not Reset When Warmup Ends)---------------------------\n");
+   fprintf(files.result,"Number of loads: %lu\n", num_load);
+   fprintf(files.result,"Number of loads that miss in SQ: %lu (%.2f%%)\n", num_load_sqmiss, 100.0*(double)num_load_sqmiss/(double)num_load);
+   fprintf(files.result,"Number of PFs issued to the memory system %lu\n", stat_pfs_issued_to_mem);
+   fprintf(files.result,"---------------------------------------------------------------------------------------------------------------------------------------\n");
+   fprintf(files.result,"------------------------MEMORY HIERARCHY MEASUREMENTS (Full Simulation i.e. Counts Not Reset When Warmup Ends)-------------------------\n");
    if (FETCH_MODEL_ICACHE) {
-      printf("I$:\n"); IC.stats();
+      fprintf(files.result,"I$:\n"); IC.stats();
    }
-   printf("L1$:\n"); L1.stats();
-   printf("L2$:\n"); L2.stats();
-   printf("L3$:\n"); L3.stats();
-   printf("---------------------------------------------------------------------------------------------------------------------------------------\n");
-   printf("----------------------------------------------Prefetcher (Full Simulation i.e. No Warmup)----------------------------------------------\n");
+   fprintf(files.result,"L1$:\n"); L1.stats();
+   fprintf(files.result,"L2$:\n"); L2.stats();
+   fprintf(files.result,"L3$:\n"); L3.stats();
+   fprintf(files.result,"---------------------------------------------------------------------------------------------------------------------------------------\n");
+   fprintf(files.result,"----------------------------------------------Prefetcher (Full Simulation i.e. No Warmup)----------------------------------------------\n");
    prefetcher.print_stats();
-   printf("---------------------------------------------------------------------------------------------------------------------------------------\n");
-   printf("\n-------------------------------ILP LIMIT STUDY (Full Simulation i.e. Counts Not Reset When Warmup Ends)--------------------------------\n");
-   printf("instructions = %lu\n", num_inst);
-   printf("cycles       = %lu\n", cycle);
-   printf("CycWP        = %lu\n", cycles_on_wrong_path);
-   printf("IPC          = %.4f\n", ((double)num_inst/(double)cycle));
-   printf("\n---------------------------------------------------------------------------------------------------------------------------------------\n");
+   fprintf(files.result,"---------------------------------------------------------------------------------------------------------------------------------------\n");
+   fprintf(files.result,"\n-------------------------------ILP LIMIT STUDY (Full Simulation i.e. Counts Not Reset When Warmup Ends)--------------------------------\n");
+   fprintf(files.result,"instructions = %lu\n", num_inst);
+   fprintf(files.result,"cycles       = %lu\n", cycle);
+   fprintf(files.result,"CycWP        = %lu\n", cycles_on_wrong_path);
+   fprintf(files.result,"IPC          = %.4f\n", ((double)num_inst/(double)cycle));
+   fprintf(files.result,"\n---------------------------------------------------------------------------------------------------------------------------------------\n");
    // Branch Prediction Measurements
    BP.output();
    BP.output_periodic_info(num_insts_per_epoch, num_cycles_per_epoch);

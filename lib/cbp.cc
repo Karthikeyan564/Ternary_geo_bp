@@ -77,7 +77,7 @@ int parseargs(int argc, char ** argv)
      //   }
      //   else
      //   {
-     //      printf("Usage: missing pipeline fill latency: -f <pipeline_fill_latency>.\n");
+     //      fprintf(files.result,"Usage: missing pipeline fill latency: -f <pipeline_fill_latency>.\n");
      //      exit(0);
      //   }
      //}
@@ -91,7 +91,7 @@ int parseargs(int argc, char ** argv)
         }
         else
         {
-           printf("Usage: missing # load/store lanes: -M <num_ldst_lanes>.\n");
+           fprintf(files.result,"Usage: missing # load/store lanes: -M <num_ldst_lanes>.\n");
            exit(0);
         }
      }
@@ -105,7 +105,7 @@ int parseargs(int argc, char ** argv)
         }
         else
         {
-           printf("Usage: missing # alu lanes: -A <num_alu_lanes>.\n");
+           fprintf(files.result,"Usage: missing # alu lanes: -A <num_alu_lanes>.\n");
            exit(0);
         }
      }
@@ -129,14 +129,14 @@ int parseargs(int argc, char ** argv)
            }
            else
            {
-              printf("Usage: missing one or more fetch bundle constraints: -F <fetch_width>,<fetch_num_branch>,<fetch_stop_at_indirect>,<fetch_stop_at_taken>,<fetch_model_icache>.\n");
+              fprintf(files.result,"Usage: missing one or more fetch bundle constraints: -F <fetch_width>,<fetch_num_branch>,<fetch_stop_at_indirect>,<fetch_stop_at_taken>,<fetch_model_icache>.\n");
               exit(0);
            }
            i++;
         }
         else
         {
-           printf("Usage: missing one or more fetch bundle constraints: -F <fetch_width>,<fetch_num_branch>,<fetch_stop_at_indirect>,<fetch_stop_at_taken>,<fetch_model_icache>.\n");
+           fprintf(files.result,"Usage: missing one or more fetch bundle constraints: -F <fetch_width>,<fetch_num_branch>,<fetch_stop_at_indirect>,<fetch_stop_at_taken>,<fetch_model_icache>.\n");
            exit(0);
         }
      }
@@ -154,14 +154,14 @@ int parseargs(int argc, char ** argv)
            }
            else
            {
-              printf("Usage: missing one or more I$ parameters: -I <log2_size>,<assoc>,<blocksize>.\n");
+              fprintf(files.result,"Usage: missing one or more I$ parameters: -I <log2_size>,<assoc>,<blocksize>.\n");
               exit(0);
            }
            i++;
         }
         else
         {
-           printf("Usage: missing I$ parameters: -I <log2_size>,<assoc>,<blocksize>.\n");
+           fprintf(files.result,"Usage: missing I$ parameters: -I <log2_size>,<assoc>,<blocksize>.\n");
            exit(0);
         }
      }
@@ -196,14 +196,14 @@ int parseargs(int argc, char ** argv)
            }
            else
            {
-              printf("Usage: missing one or more L1$, L2$, and L3$ parameters: -D <log2_L1_size>,<L1_assoc>,<L1_blocksize>,<L1_latency>,<log2_L2_size>,<L2_assoc>,<L2_blocksize>,<L2_latency>,<log2_L3_size>,<L3_assoc>,<L3_blocksize>,<L3_latency>,<main_memory_latency>.\n");
+              fprintf(files.result,"Usage: missing one or more L1$, L2$, and L3$ parameters: -D <log2_L1_size>,<L1_assoc>,<L1_blocksize>,<L1_latency>,<log2_L2_size>,<L2_assoc>,<L2_blocksize>,<L2_latency>,<log2_L3_size>,<L3_assoc>,<L3_blocksize>,<L3_latency>,<main_memory_latency>.\n");
               exit(0);
            }
            i++;
         }
         else
         {
-           printf("Usage: missing L1$, L2$, and L3$ parameters: -D <log2_L1_size>,<L1_assoc>,<L1_blocksize>,<L1_latency>,<log2_L2_size>,<L2_assoc>,<L2_blocksize>,<L2_latency>,<log2_L3_size>,<L3_assoc>,<L3_blocksize>,<L3_latency>,<main_memory_latency>.\n");
+           fprintf(files.result,"Usage: missing L1$, L2$, and L3$ parameters: -D <log2_L1_size>,<L1_assoc>,<L1_blocksize>,<L1_latency>,<log2_L2_size>,<L2_assoc>,<L2_blocksize>,<L2_latency>,<log2_L3_size>,<L3_assoc>,<L3_blocksize>,<L3_latency>,<main_memory_latency>.\n");
            exit(0);
         }
      }
@@ -220,14 +220,14 @@ int parseargs(int argc, char ** argv)
            }
            else
            {
-              printf("Usage: missing epoch size: -E <epoch_size>\n");
+              fprintf(files.result,"Usage: missing epoch size: -E <epoch_size>\n");
               exit(0);
            }
            i++;
         }
         else
         {
-           printf("Usage: missing epoch size: -E <epoch_size>\n");
+           fprintf(files.result,"Usage: missing epoch size: -E <epoch_size>\n");
            exit(0);
         }
      }
@@ -241,7 +241,7 @@ int parseargs(int argc, char ** argv)
         }
         else
         {
-           printf("Usage: missing window size: -w <window_size>.\n");
+           fprintf(files.result,"Usage: missing window size: -w <window_size>.\n");
            exit(0);
         }
      }
@@ -255,8 +255,8 @@ int parseargs(int argc, char ** argv)
      return(i);
   }
   else {
-     //printf("usage:\t%s\n[optional: -d to enable perfect data cache]\n\t[optional: -b to enable perfect branch prediction (all branch types)]\n\t[optional: -i to enable perfect indirect-branch prediction]\n\t[optional: -P to enable stride prefetcher in L1D]\n\t[optional: -f <pipeline_fill_latency>]\n\t[optional: -M <num_ldst_lanes>\n\t[optional: -A <num_alu_lanes>\n\t[optional: -F <fetch_width>,<fetch_num_branch>,<fetch_stop_at_indirect>,<fetch_stop_at_taken>,<fetch_model_icache>]\n\t[optional: -I <log2_ic_size>,<ic_assoc>,<ic_blocksize>]\n\t[optional: -D <log2_L1_size>,<L1_assoc>,<L1_blocksize>,<L1_latency>,<log2_L2_size>,<L2_assoc>,<L2_blocksize>,<L2_latency>,<log2_L3_size>,<L3_assoc>,<L3_blocksize>,<L3_latency>,<main_memory_latency>]\n\t[optional: -w <window_size>]\n\t[REQUIRED: .gz trace file]\n\t[optional: contestant's arguments]\n", argv[0]);
-     printf("usage:\t%s\n"
+     //fprintf(files.result,"usage:\t%s\n[optional: -d to enable perfect data cache]\n\t[optional: -b to enable perfect branch prediction (all branch types)]\n\t[optional: -i to enable perfect indirect-branch prediction]\n\t[optional: -P to enable stride prefetcher in L1D]\n\t[optional: -f <pipeline_fill_latency>]\n\t[optional: -M <num_ldst_lanes>\n\t[optional: -A <num_alu_lanes>\n\t[optional: -F <fetch_width>,<fetch_num_branch>,<fetch_stop_at_indirect>,<fetch_stop_at_taken>,<fetch_model_icache>]\n\t[optional: -I <log2_ic_size>,<ic_assoc>,<ic_blocksize>]\n\t[optional: -D <log2_L1_size>,<L1_assoc>,<L1_blocksize>,<L1_latency>,<log2_L2_size>,<L2_assoc>,<L2_blocksize>,<L2_latency>,<log2_L3_size>,<L3_assoc>,<L3_blocksize>,<L3_latency>,<main_memory_latency>]\n\t[optional: -w <window_size>]\n\t[REQUIRED: .gz trace file]\n\t[optional: contestant's arguments]\n", argv[0]);
+     fprintf(files.result,"usage:\t%s\n"
              //"\t[optional: -v to enable value prediction]\n", 
              //"\t[optional: -p to enable perfect value prediction (if -v also specified)]\n",
              "\t[optional: -d to enable perfect data cache]\n"

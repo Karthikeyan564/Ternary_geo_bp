@@ -28,7 +28,9 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include "parameters.h"
 #include "cache.h"
+#include "log.h"
 
+extern log_files files;
 
 cache_t::cache_t(uint64_t size, uint64_t assoc, uint64_t blocksize, uint64_t latency, cache_t *next_level) {
    uint64_t num_sets;
@@ -141,10 +143,10 @@ void cache_t::update_lru(uint64_t index, uint64_t mru_way) {
 }
 
 void cache_t::stats() {
-   printf("\taccesses   = %lu\n", accesses);
-   printf("\tmisses     = %lu\n", misses);
-   printf("\tmiss ratio = %.2f%%\n", 100.0*((double)misses/(double)accesses));
-   printf("\tpf accesses   = %lu\n", pf_accesses);
-   printf("\tpf misses     = %lu\n", pf_misses);
-   printf("\tpf miss ratio = %.2f%%\n", 100.0*((double)pf_misses/(double)pf_accesses));
+   fprintf(files.result,"\taccesses   = %lu\n", accesses);
+   fprintf(files.result,"\tmisses     = %lu\n", misses);
+   fprintf(files.result,"\tmiss ratio = %.2f%%\n", 100.0*((double)misses/(double)accesses));
+   fprintf(files.result,"\tpf accesses   = %lu\n", pf_accesses);
+   fprintf(files.result,"\tpf misses     = %lu\n", pf_misses);
+   fprintf(files.result,"\tpf miss ratio = %.2f%%\n", 100.0*((double)pf_misses/(double)pf_accesses));
 }
