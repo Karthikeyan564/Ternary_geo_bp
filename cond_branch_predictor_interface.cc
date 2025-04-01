@@ -17,7 +17,10 @@
 // This file provides a sample predictor integration based on the interface provided.
 
 #include "lib/sim_common_structs.h"
-#include "cbp2016_tage_sc_l.h"
+// #include "cbp2016_tage_sc_l.h"
+#include "conv_pred.h"
+#include <cinttypes>
+#include <cassert>
 #include "my_cond_branch_predictor.h"
 #include "lib/log.h"
 #include <cassert>
@@ -36,7 +39,8 @@ extern log_files files;
 void beginCondDirPredictor()
 {
     // setup sample_predictor
-    cbp2016_tage_sc_l.setup();
+    conv_predicter.setup();
+    // cbp2016_tage_sc_l.setup();
     cond_predictor_impl.setup();
 }
 
@@ -49,7 +53,8 @@ void beginCondDirPredictor()
 //
 bool get_cond_dir_prediction(uint64_t seq_no, uint8_t piece, uint64_t pc, const uint64_t pred_cycle)
 {
-    const bool tage_sc_l_pred =  cbp2016_tage_sc_l.predict(seq_no, piece, pc);
+    // const bool tage_sc_l_pred =  cbp2016_tage_sc_l.predict(seq_no, piece, pc); 
+    const bool tage_sc_l_pred = conv_predicter.predict(seq_no, piece, pc);
     const bool my_prediction = cond_predictor_impl.predict(seq_no, piece, pc, tage_sc_l_pred);
     return my_prediction;
 }
@@ -92,13 +97,14 @@ void spec_update(uint64_t seq_no, uint8_t piece, uint64_t pc, InstClass inst_cla
 
     if(inst_class == InstClass::condBranchInstClass)
     {
-        cbp2016_tage_sc_l.history_update(seq_no, piece, pc, br_type, resolve_dir, next_pc);
+        // cbp2016_tage_sc_l.history_update(seq_no, piece, pc, br_type, resolve_dir, next_pc);
+        conv_predicter.history_update(seq_no, piece, pc, resolve_dir, next_pc);
         cond_predictor_impl.history_update(seq_no, piece, pc, resolve_dir, next_pc);
     }
-    else
-    {
-        cbp2016_tage_sc_l.TrackOtherInst(pc, br_type, resolve_dir, next_pc);
-    }
+    // else
+    // {
+    //     conv_predicter.TrackOtherInst(pc, br_type, resolve_dir, next_pc);
+    // }
 
 }
 
@@ -131,7 +137,8 @@ void notify_instr_execute_resolve(uint64_t seq_no, uint8_t piece, uint64_t pc, c
             const bool _resolve_dir = _exec_info.taken.value();
             const uint64_t _next_pc = _exec_info.next_pc;
 
-            cbp2016_tage_sc_l.update(seq_no, piece, pc, _resolve_dir, pred_dir, _next_pc);
+            conv_predicter.update(seq_no, piece, pc, _resolve_dir, pred_dir, _next_pc);
+            // cbp2016_tage_sc_l.update(seq_no, piece, pc, _resolve_dir, pred_dir, _next_pc);
             cond_predictor_impl.update(seq_no, piece, pc, _resolve_dir, pred_dir, _next_pc);
 	    fprintf(files.history, "%" PRIx64 ",%" PRIx8 ",%" PRIx64 ",%" PRIx64 ",%" PRIu64 ",%d,%d\n", seq_no, piece, pc, _next_pc, execute_cycle, pred_dir, _resolve_dir);
         }
@@ -161,6 +168,7 @@ void notify_instr_commit(uint64_t seq_no, uint8_t piece, uint64_t pc, const bool
 //
 void endCondDirPredictor ()
 {
-    cbp2016_tage_sc_l.terminate();
+    conv_predicter.terminate();
+    // cbp2016_tage_sc_l.terminate();
     cond_predictor_impl.terminate();
 }
