@@ -11,7 +11,8 @@
 #include <vector>
 #include <array>
 #include <iostream>
-
+#include "lib/parameters.h"
+//  extern int U_incrment;
 
 //parameters of the loop predictor
 #define LOGL 5
@@ -1257,7 +1258,7 @@ class CBP2016_TAGE_SC_L
         // PREDICTOR UPDATE
 
         //void update (UINT64 PC, int brtype, bool resolveDir, bool predDir, UINT64 nextPC)
-        void update (uint64_t seq_no, uint8_t piece, UINT64 PC, bool resolveDir, bool predDir, UINT64 nextPC)
+        void update (uint64_t seq_no, uint8_t piece, UINT64 PC, bool resolveDir, bool predDir, UINT64 nextPC, bool is_LD_dependent)
         {
             const auto pred_hist_key = get_unique_inst_id(seq_no, piece);
             const auto& pred_time_history = pred_time_histories.at(pred_hist_key);
@@ -1269,11 +1270,11 @@ class CBP2016_TAGE_SC_L
             //    assert(false);
             //} 
             // remove checkpointed hist
-            update(PC, resolveDir, pred_taken, nextPC, pred_time_history);
+            update(PC, resolveDir, pred_taken, nextPC, pred_time_history, is_LD_dependent);
             pred_time_histories.erase(pred_hist_key);
         }
 
-        void update (UINT64 PC, bool resolveDir, bool pred_taken, UINT64 nextPC, const cbp_hist_t& hist_to_use)
+        void update (UINT64 PC, bool resolveDir, bool pred_taken, UINT64 nextPC, const cbp_hist_t& hist_to_use, bool is_LD_dependent)
         {
 #ifdef SC
 #ifdef LOOPPREDICTOR
@@ -1590,9 +1591,15 @@ class CBP2016_TAGE_SC_L
             if (LongestMatchPred != alttaken)
                 if (LongestMatchPred == resolveDir)
                 {
-                    if (gtable[HitBank][GI[HitBank]].u < (1 << UWIDTH) - 1)
+                    if (gtable[HitBank][GI[HitBank]].u < (1 << UWIDTH) - 1){
                         gtable[HitBank][GI[HitBank]].u++;
+                        if (is_LD_dependent)
+                        {
+                            gtable[HitBank][GI[HitBank]].u+=U_incrment;
+                        }
+                    }
                 }
+            
             //END TAGE UPDATE
             //HistoryUpdate (PC, brtype, resolveDir, nextPC, phist, ptghist, ch_i, ch_t[0], ch_t[1]);
 

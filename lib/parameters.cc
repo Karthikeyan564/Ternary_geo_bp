@@ -79,3 +79,6 @@ uint64_t MISP_REDUCTION_PERC = 0;
 
 uint64_t EPOCH_SIZE_INSTS = 1000000;
 bool PRINT_PER_EPOCH_STATS = false;
+bool LOAD_DEPENDENT_BRANCHES = false;
+int U_incrment = 0 ;
+

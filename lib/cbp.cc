@@ -245,6 +245,34 @@ int parseargs(int argc, char ** argv)
            exit(0);
         }
      }
+
+     else if (!strcmp(argv[i], "-l"))
+     {
+        i++;
+        if (i < argc)
+        {
+         LOAD_DEPENDENT_BRANCHES = true;
+     }
+   }
+   else if (!strcmp(argv[i], "-u"))
+     {
+        i++;
+        if (i < argc)
+        {
+           int useful_incr;
+           if (sscanf(argv[i], "%d", &useful_incr) == 1)
+           {
+              U_incrment = useful_incr;
+           }
+           else
+           {
+              printf("Usage: missing useful increment: -u <useful_incr>\n");
+              exit(0);
+           }
+           i++;
+        }
+     }
+
      else
      {
         break;

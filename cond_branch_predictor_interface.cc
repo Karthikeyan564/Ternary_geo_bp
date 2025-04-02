@@ -25,6 +25,11 @@
 #include <iterator>
 #include <fstream>
 #include <deque>
+#include <unordered_map>
+#include <unordered_set>
+#include <map>
+#include "lib/parameters.h"
+// #include "lib/parameters.cc"
 
 //FILE *fileptr = fopen("output/cond_branches.log", "w");
 //
@@ -35,7 +40,85 @@
 //
 extern log_files files;
 std::unordered_map<uint64_t/*key*/, DebugLog/*val*/> histories_log;
-std::unordered_map<uint64_t, std::deque<std::vector<int>>> depChains;
+// std::unordered_map<uint64_t, std::deque<std::vector<int>>> depChains;
+// std::unordered_map<uint64_t, std::vector<uint64_t>> depChains;
+// extern bool LOAD_DEPENDENT_BRANCHES ;
+
+// Function to compute CyclWP summary from unordered_map
+std::map<int8_t, std::tuple<int, uint64_t, double>> compute_CyclWP_summary(const std::unordered_map<uint64_t, DebugLog>& histories_log) {
+    std::map<int8_t, std::pair<int, uint64_t>> summary; // Key: Load Dependence, Value: (miss count, CyclWP sum)
+
+    for (const auto& [key, log] : histories_log) {
+        if (log.inst_class == InstClass::condBranchInstClass && log.executed) {  // Filter executed branches with Inst_Class == 3
+            bool mispredicted = (log.taken != log.pred_dir);
+            uint64_t CyclWP = std::max(log.fetch_cycle, log.execute_cycle) - log.pred_cycle;
+            CyclWP = mispredicted ? CyclWP : 0;
+
+            if(mispredicted){
+                if(log.src_regs_string == "[]" || log.src_regs_string == "[64]")
+                {
+                    summary[-1].first += 1;  // Increment miss count
+                    summary[-1].second += CyclWP;  // Add CyclWP sum
+                }
+            else 
+                {
+                    summary[log.load_dependence].first += 1;  // Increment miss count
+                    summary[log.load_dependence].second += CyclWP;  // Add CyclWP sum
+                }
+            }
+            
+        }
+    }
+
+    // Compute CyclWP per miss and store in final map
+    std::map<int8_t, std::tuple<int, uint64_t, double>> final_summary;
+    for (const auto& [load_dep, stats] : summary) {
+        int num_misses = stats.first;
+        uint64_t total_CyclWP = stats.second;
+        double avg_CyclWP = (num_misses > 0) ? static_cast<double>(total_CyclWP) / num_misses : 0.0;
+        final_summary[load_dep] = std::make_tuple(num_misses, total_CyclWP, avg_CyclWP);
+    }
+
+    return final_summary;
+}
+
+class DependencyGraph {
+public:
+    void addDependency(uint64_t dest, uint64_t src) {
+        graph[dest].insert(src);
+    }
+
+    void deleteDestination(uint64_t dest) {
+        // Remove the destination register from the graph
+        graph.erase(dest);
+
+        // Remove any references to `dest` in other registers' dependency lists
+        for (auto& [key, dependencies] : graph) {
+            dependencies.erase(dest);
+        }
+    }
+
+    std::unordered_set<uint64_t> getAllDependencies(uint64_t dest) {
+        std::unordered_set<uint64_t> visited;
+        dfs(dest, visited);
+        visited.erase(dest);  // Remove the destination itself if present
+        return visited;
+    }
+
+private:
+    std::unordered_map<uint64_t, std::unordered_set<uint64_t>> graph;
+
+    void dfs(uint64_t node, std::unordered_set<uint64_t>& visited) {
+        if (visited.count(node)) return;
+        visited.insert(node);
+
+        if (graph.find(node) != graph.end()) {
+            for (uint64_t src : graph[node]) {
+                dfs(src, visited);
+            }
+        }
+    }
+};
 
 uint64_t get_unique_inst_id(uint64_t seq_no, uint8_t piece) 
 {
@@ -45,6 +128,13 @@ uint64_t get_unique_inst_id(uint64_t seq_no, uint8_t piece)
 
 void beginCondDirPredictor()
 {
+    if (LOAD_DEPENDENT_BRANCHES) {
+        printf("Optmizied for load dependent branches with usefulness increment of %d\n", U_incrment) ;
+    }
+    else
+    {
+        printf("Not optimized for load dependent branches\n");
+    }
     // setup sample_predictor
     cbp2016_tage_sc_l.setup();
     cond_predictor_impl.setup();
@@ -146,8 +236,35 @@ void spec_update(uint64_t seq_no, uint8_t piece, uint64_t pc, InstClass inst_cla
 // Along with the unique identifying ids(seq_no, piece), PC of the instruction, decode info and cycle are also provided as inputs
 //
 // For the sample predictor implementation, we do not leverage decode information
+DependencyGraph depGraph;
+std::unordered_map<uint64_t/*key*/, bool/*val*/> registers_in_flight;
 void notify_instr_decode(uint64_t seq_no, uint8_t piece, uint64_t pc, const DecodeInfo& _decode_info, const uint64_t decode_cycle)
 {
+    if (is_load(_decode_info.insn_class)){
+        
+        std::vector<uint64_t> sources = _decode_info.src_reg_info;
+        uint64_t dst_reg = _decode_info.dst_reg_info.value();
+        registers_in_flight[dst_reg] = true;
+        depGraph.deleteDestination(dst_reg);
+        for (uint64_t src : sources) 
+            depGraph.addDependency(dst_reg, src);
+
+        
+    }
+    else if (is_cond_br(_decode_info.insn_class)){
+        uint16_t loadCount = 0;
+        std::vector<uint64_t> sources = _decode_info.src_reg_info;
+        if (!(sources.empty() || (sources.size() == 1 && sources[0] == 64))) {
+            for (uint64_t src : sources) {
+                std::unordered_set<uint64_t> dependencies = depGraph.getAllDependencies(src);
+                loadCount += dependencies.size();  
+            }
+        }
+        const auto log_key = get_unique_inst_id(seq_no, piece);
+        DebugLog& activeLog = histories_log[log_key];
+        activeLog.load_dependence = loadCount;
+    }
+    
 }
 
 //
@@ -184,14 +301,30 @@ void notify_instr_execute_resolve(uint64_t seq_no, uint8_t piece, uint64_t pc, c
 {
     const auto log_key = get_unique_inst_id(seq_no, piece);
     const bool is_branch = is_br(_exec_info.dec_info.insn_class);
+    // extern bool LOAD_DEPENDENT_BRANCHES;
     if(is_branch)
     {
         if (is_cond_br(_exec_info.dec_info.insn_class))
         {
             const bool _resolve_dir = _exec_info.taken.value();
             const uint64_t _next_pc = _exec_info.next_pc;
+            bool is_LD_dependent = false;
+            
+            std::vector<uint64_t> sources = _exec_info.dec_info.src_reg_info;
+            if (!(sources.empty() || (sources.size() == 1 && sources[0] == 64))) {
+                for (uint64_t src : sources) {
+                    is_LD_dependent = is_LD_dependent | registers_in_flight[src];
+                }
+            }
 
-            cbp2016_tage_sc_l.update(seq_no, piece, pc, _resolve_dir, pred_dir, _next_pc);
+            if (LOAD_DEPENDENT_BRANCHES) {
+            }
+            else
+            {
+                is_LD_dependent = false;
+            }
+
+            cbp2016_tage_sc_l.update(seq_no, piece, pc, _resolve_dir, pred_dir, _next_pc, is_LD_dependent);
             cond_predictor_impl.update(seq_no, piece, pc, _resolve_dir, pred_dir, _next_pc);
 	    // fprintf(files.history, "%" PRIx64 ",%" PRIx8 ",%" PRIx64 ",%" PRIx64 ",%" PRIu64 ",%d,%d\n", 
         //         seq_no, piece, pc, _next_pc, execute_cycle, pred_dir, _resolve_dir);
@@ -202,44 +335,44 @@ void notify_instr_execute_resolve(uint64_t seq_no, uint8_t piece, uint64_t pc, c
         }
     }
 
-    std::vector<uint64_t> sources = _exec_info.dec_info.src_reg_info;
+    // std::vector<uint64_t> sources = _exec_info.dec_info.src_reg_info;
+    // uint64_t dst_reg = _exec_info.dec_info.dst_reg_info.value();
     // Update dependency chain
     const uint8_t maxChainDepth = 5;
-    if (is_load(_exec_info.dec_info.insn_class)){
-        std::deque<std::vector<int>> newChain;
-        uint64_t dst_reg = _exec_info.dec_info.dst_reg_info.value();
 
-        for (int src : sources) {
-            std::vector<int> newDep = {src};
+    // if (is_load(_exec_info.dec_info.insn_class)){
+    //     std::deque<std::vector<int>> newChain;
+    //     for (int src : sources) {
+    //         std::vector<int> newDep = {src};
 
-            if (depChains.find(src) != depChains.end()) {
-                for (const auto& chain : depChains[src]) {
-                    if (newDep.size() < maxChainDepth) {
-                        newDep.insert(newDep.end(), chain.begin(), chain.end());
-                    }
-                }
-            }
+    //         if (depChains.find(src) != depChains.end()) {
+    //             for (const auto& chain : depChains[src]) {
+    //                 if (newDep.size() < maxChainDepth) {
+    //                     newDep.insert(newDep.end(), chain.begin(), chain.end());
+    //                 }
+    //             }
+    //         }
+    //         newChain.push_back(newDep);
+    //     }
 
-            newChain.push_back(newDep);
-        }
-
-        depChains[dst_reg] = newChain;
-    }
+    //     depChains[dst_reg] = newChain;
+    // }
 
     // Get number of dependencies for conditional branches
-    uint8_t loadCount = 255;
-    if(is_cond_br(_exec_info.dec_info.insn_class)) {
-        loadCount = 0;
-        if (!(sources.empty() || (sources.size() == 1 && sources[0] == 64))) {
-            for (int src : sources) {
-                if (depChains.find(src) != depChains.end()) {
-                    loadCount += depChains[src].size();
-                }
-            }
-        }
-        loadCount = std::min(loadCount,maxChainDepth);       
-        
-    }    
+    // uint8_t loadCount = 255;
+    // if(is_cond_br(_exec_info.dec_info.insn_class)) {
+    //     loadCount = 0;
+    //     if (!(sources.empty() || (sources.size() == 1 && sources[0] == 64))) {
+    //         for (int src : sources) {
+    //             if (depChains.find(src) != depChains.end()) {
+    //                 for (const auto& chain : depChains[src]) {
+    //                     loadCount += chain.size();
+    //                 }
+    //             }                
+    //         }
+    //     }
+    //     loadCount = std::min(loadCount,maxChainDepth);        
+    // }    
 
     if(is_cond_br(_exec_info.dec_info.insn_class) || is_load(_exec_info.dec_info.insn_class)){
             
@@ -252,13 +385,14 @@ void notify_instr_execute_resolve(uint64_t seq_no, uint8_t piece, uint64_t pc, c
             activeLog.inst_class = InstClass::loadInstClass;
             // loadCount = UINT8_MAX;
         }
-
+        // activeLog.inst_class = _exec_info.dec_info.insn_class;
         activeLog.taken =  (_exec_info.taken.has_value())? _exec_info.taken.value():-1;
         activeLog.src_regs_string = vector_to_string(_exec_info.dec_info.src_reg_info);
-        activeLog.dst_reg = (_exec_info.dec_info.dst_reg_info.has_value())? _exec_info.dec_info.dst_reg_info.value(): 256 ;  
+        activeLog.dst_reg = (_exec_info.dec_info.dst_reg_info.has_value())? _exec_info.dec_info.dst_reg_info.value(): 255 ;  
         activeLog.mem_va = (_exec_info.mem_va.has_value())? _exec_info.mem_va.value():0;
         activeLog.next_pc = _exec_info.next_pc;
-        activeLog.load_dependence = loadCount;
+        // activeLog.load_dependence = loadCount;
+        activeLog.executed = 1;
     }
 
     // if(is_cond_br(_exec_info.dec_info.insn_class) || is_load(_exec_info.dec_info.insn_class)){
@@ -283,7 +417,13 @@ void notify_instr_execute_resolve(uint64_t seq_no, uint8_t piece, uint64_t pc, c
 //
 // For the sample predictor implementation, we do not leverage commit information
 void notify_instr_commit(uint64_t seq_no, uint8_t piece, uint64_t pc, const bool pred_dir, const ExecuteInfo& _exec_info, const uint64_t commit_cycle)
-{
+{   
+    if(is_load(_exec_info.dec_info.insn_class)){
+        uint64_t dst_reg = _exec_info.dec_info.dst_reg_info.value();
+        // depChains.erase(dst_reg);
+        depGraph.deleteDestination(dst_reg);
+        registers_in_flight.erase(dst_reg);
+    }
 }
 
 //
@@ -292,7 +432,7 @@ void notify_instr_commit(uint64_t seq_no, uint8_t piece, uint64_t pc, const bool
 // This function is called by the simulator at the end of simulation.
 // It can be used by the contestant to print out other contestant-specific measurements.
 //
-void printToCSV(const std::unordered_map<uint64_t, DebugLog>& histories_log, FILE *file) {
+void writeHistorylog(const std::unordered_map<uint64_t, DebugLog>& histories_log, FILE *file) {
     if (!file) {
         std::cerr << "Error: Invalid file pointer." << std::endl;
         return;
@@ -300,10 +440,10 @@ void printToCSV(const std::unordered_map<uint64_t, DebugLog>& histories_log, FIL
     
     // Write CSV header
     fprintf(file, "Key,PC,Next_PC,Pred_Cycle,Fetch_Cycle,Execute_Cycle,Pred_Dir,Taken," 
-                   "Predictor_Used,Src_Regs,Dst_Reg,Mem_VA,Inst_Class,GHIST,Load_Dependence\n");
+                   "Predictor_Used,Src_Regs,Dst_Reg,Mem_VA,Inst_Class,GHIST,Load_Dependence,executed\n");
     
     for (const auto& [key, log] : histories_log) {
-        fprintf(file, "%lu,%lu,%lu,%lu,%lu,%lu,%d,%d,%d,\"%s\",%d,%lu,%d,%lu,%d\n",
+        fprintf(file,"%lu,%lu,%lu,%lu,%lu,%lu,%d,%d,%d,\"%s\",%d,%lu,%d,%lu,%d,%d\n",
                 key,
                 log.pc,
                 log.next_pc,
@@ -318,15 +458,40 @@ void printToCSV(const std::unordered_map<uint64_t, DebugLog>& histories_log, FIL
                 log.mem_va,
                 static_cast<int>(log.inst_class),
                 log.GHIST,
-                log.load_dependence);
+                log.load_dependence,
+                log.executed);
     }
     fflush(file);
     // std::cout << "Data written to history log file." << std::endl;
 }
 
+
+void write_CyclWP_summary_to_file(const std::map<int8_t, std::tuple<int, uint64_t, double>>& summary, FILE *file) {
+
+    if (!file) {
+        std::cerr << "Error: Invalid file pointer." << std::endl;
+        return;
+    }
+
+    // Write header
+    fprintf(file, "Load_Dependence,Number of misses,CyclWP,CyclWP per miss\n");
+
+    // Write data
+    for (const auto& [load_dep, stats] : summary) {
+        int num_misses = std::get<0>(stats);
+        uint64_t total_CyclWP = std::get<1>(stats);
+        double avg_CyclWP = std::get<2>(stats);
+
+        fprintf(file, "%d,%d,%lu,%.2f\n", load_dep, num_misses, total_CyclWP, avg_CyclWP);
+    }
+
+    fclose(file);
+}
+
 void endCondDirPredictor ()
 {
-    printToCSV(histories_log, files.history);     
+    // writeHistorylog(histories_log, files.history); 
+    // write_CyclWP_summary_to_file(compute_CyclWP_summary(histories_log),files.CyclWP_summary);    
     cbp2016_tage_sc_l.terminate();
     cond_predictor_impl.terminate();
 }

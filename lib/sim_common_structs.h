@@ -28,6 +28,8 @@
 #include <ostream>
 #include <string>
 
+
+
 enum class InstClass : uint8_t
 {
     aluInstClass = 0,
@@ -194,7 +196,7 @@ struct DebugLog{
     uint64_t fetch_cycle; //
     uint64_t execute_cycle; //
     uint8_t pred_dir; //
-    uint8_t taken;
+    int8_t taken;
     uint8_t predictor_used;//
     std::string src_regs_string;
     uint8_t  dst_reg;
@@ -202,6 +204,7 @@ struct DebugLog{
     InstClass inst_class; //
     uint64_t GHIST;   //
     uint8_t load_dependence;
+    bool executed;
 
 
     DebugLog()
@@ -220,10 +223,11 @@ struct DebugLog{
         predictor_used = 10;
         mem_va = 0;
         src_regs_string = "[]";
-        dst_reg = 255;
+        dst_reg = 254;
         inst_class = InstClass::undefInstClass;
-        load_dependence = 0;
+        load_dependence = UINT8_MAX;
         GHIST = 0;
+        executed = 0;
 
     }
 };

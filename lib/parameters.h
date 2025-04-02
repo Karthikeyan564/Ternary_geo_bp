@@ -86,4 +86,7 @@ extern uint64_t MISP_REDUCTION_PERC;
 
 extern uint64_t EPOCH_SIZE_INSTS;
 extern bool PRINT_PER_EPOCH_STATS;
+
+extern bool LOAD_DEPENDENT_BRANCHES;
+extern int U_incrment;
 #endif

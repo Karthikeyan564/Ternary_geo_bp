@@ -5,3 +5,4 @@ cbp
 output/
 traces/
 *.a
+sample_traces/
