@@ -1046,8 +1046,7 @@ class CBP2016_TAGE_SC_L
 #ifdef LOOPPREDICTOR
             predloop = getloop (PC, hist_to_use);   // loop prediction
             pred_taken = ((hist_to_use.WITHLOOP >= 0) && (LVALID)) ? predloop : pred_taken;
-            pred_taken = ((hist_to_use.WITHLOOP >= 0) && (LVALID)) ? predloop : pred_taken;
-            loop_TAGE = ((WITHLOOP >= 0) && (LVALID)) ? 1 : 0;
+            loop_TAGE = ((hist_to_use.WITHLOOP >= 0) && (LVALID)) ? 1 : 0;
 #endif
             pred_inter = pred_taken;
 
